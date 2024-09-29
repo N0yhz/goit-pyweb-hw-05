@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import aiohttp
 import websockets
@@ -61,47 +60,31 @@ async def get_exchange_for_days(days: int):
     rates = await fetcher.get_exchange_rates(days)
     return rates
 
+async def intermediate_handler(websocket, path):
+    api_client = Currency_API_Client()
+    currency_service = CurrencyService(api_client)
+    await websockets_handler(websocket, path, currency_service)
+
 async def websockets_handler(websocket, path, currency_service):
         async for message in websocket:
             if message.startswith('exchange'):
                 await log_command(message)
                 parts = message.split()
-                if len(parts)< 1:
+                if len(parts) > 1:
                     try:
                         days = int(parts[1])
-                        rates = await currency_service.get_exchange_rates_for_days(days, ['USD', 'EUR'])
-                        response = f'Exchange rates for the last {days} days:\n{rates}'
+                        rates = await currency_service.get_rates(days, ['USD', 'EUR'])
+                        response = f'Exchange rates for the last {days} days:\\n{rates}'
                     except ValueError:
-                        response = 'Invalid number of days.'
+                        response = 'Invalid number of days.' 
                 else:
                     rates = await get_exchange_for_days()
-                    response = f'Current exchange rates:\n{rates}'
-
-                await websocket.send(response)
-
-async def main(days: int, currencies: List[str]):
-    api_client = Currency_API_Client()
-    currency_service = CurrencyService(api_client)
-    results = await currency_service.get_exchange_rates_for_days(days, currencies)
-    for result in results:
-        print(result)
+                    response = f'Current exchange rates:\\n{rates}'
+                    await websocket.send(response)
 
 if __name__ == '__main__':
 
-    star_server = websockets.serve(websockets_handler, 'localhost', 6789)
+    start_server = websockets.serve(websockets_handler, 'localhost', 8765)
 
-    asyncio.get_event_loop().run_until_complete(star_server)
+    asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
-
-    if len(sys.argv) < 2:
-        print('Usage: pyhton main.py <days> <currency>')
-        sys.exit(1)
-    
-    days = int(sys.argv[1])
-
-    if days >10:
-        print('You can only fetch data up to 10 days.')
-        sys.exit(1)
-    currencies = sys.argv[2:] if len(sys.argv) > 2 else ['USD','EUR']
-
-    asyncio.run(main(days, currencies))
