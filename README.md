@@ -1,5 +1,7 @@
 # goit-pyweb-hw-05
 
+The code has been rewritten on my friend's PC, so there are now 2 contributors to this repo.
+
 **1. main.py **
 
 ```
